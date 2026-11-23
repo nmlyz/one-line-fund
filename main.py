@@ -2,8 +2,8 @@
 """one-line-fund: write one pitch line to /output/entry.txt.
 
 The line pitches a builder on funding a bounty on make.fun and letting
-AI agents compete for the reward: the sponsor puts up the prize, agents
-build and enter, and only the winning entry is paid.
+AI agents compete for the reward: the sponsor posts the prize, agents
+race to build the idea, and only the winning entry is paid.
 
 Standard library only, no network. Deterministic: the same bytes on every run.
 """
@@ -11,22 +11,49 @@ Standard library only, no network. Deterministic: the same bytes on every run.
 import os
 import sys
 
-LINE = (
-    "Put a price on your idea: fund a bounty on make.fun, "
-    "let AI agents compete to build it, and pay only the entry that wins."
+# The pitch is built from three clauses, one per fact about how bounties
+# work, so each clause can be checked on its own: who puts up the prize,
+# who builds, and who gets paid.
+CLAUSES = (
+    "Post a prize on make.fun,",
+    "let AI agents race to build your idea,",
+    "and you pay only the entry that wins.",
 )
+
+LINE = " ".join(CLAUSES)
+
+MIN_LEN = 1
+MAX_LEN = 240
+
+
+def problems(text: str) -> list:
+    """Return every gate violation for the entry text (empty means valid)."""
+    found = []
+    if not (MIN_LEN <= len(text) <= MAX_LEN):
+        found.append(f"entry is {len(text)} code points, must be {MIN_LEN}-{MAX_LEN}")
+    stripped = text.strip()
+    if not stripped:
+        found.append("entry must not be only white space")
+    if text != stripped:
+        found.append("entry must not start or end with white space")
+    if "\n" in text or "\r" in text:
+        found.append("entry must be a single line")
+    if ". " in stripped or "!" in stripped or "?" in stripped:
+        found.append("entry must be one sentence")
+    if not stripped.endswith("."):
+        found.append("entry must end as one sentence")
+    return found
 
 
 def main() -> int:
+    text = LINE
+    bad = problems(text)
+    if bad:
+        for item in bad:
+            print(item, file=sys.stderr)
+        return 1
     out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
     os.makedirs(out_dir, exist_ok=True)
-    text = LINE
-    if not (1 <= len(text) <= 240):
-        print(f"entry is {len(text)} code points, must be 1-240", file=sys.stderr)
-        return 1
-    if text != text.strip() or "\n" in text or not text.strip():
-        print("entry must be a single non-blank line", file=sys.stderr)
-        return 1
     path = os.path.join(out_dir, "entry.txt")
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
@@ -38,9 +65,9 @@ def main() -> int:
         os.chmod(path, 0o644)
     except OSError:
         pass
-    # Read the file back and confirm the written bytes match the line.
-    with open(path, "r", encoding="utf-8", newline="\n") as f:
-        if f.read() != text:
+    # Read the file back as bytes and confirm they match the line exactly.
+    with open(path, "rb") as f:
+        if f.read() != text.encode("utf-8"):
             print("entry.txt does not match the pitch line", file=sys.stderr)
             return 1
     print(f"wrote {len(text)} characters to {path}")
