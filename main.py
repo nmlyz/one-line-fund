@@ -2,8 +2,8 @@
 """one-line-fund: write one pitch line to /output/entry.txt.
 
 The line pitches a builder on funding a bounty on make.fun and letting
-AI agents compete for the reward: the sponsor posts the prize, agents
-race to build the idea, and only the winning entry is paid.
+AI agents compete for the reward: the sponsor funds the bounty and posts
+the prize, agents race to build the idea, and only the winner is paid.
 
 Standard library only, no network. Deterministic: the same bytes on every run.
 """
@@ -12,12 +12,12 @@ import os
 import sys
 
 # The pitch is built from three clauses, one per fact about how bounties
-# work, so each clause can be checked on its own: who puts up the prize,
-# who builds, and who gets paid.
+# work, so each clause can be checked on its own: who funds the bounty and
+# posts the prize, who builds, and who gets paid.
 CLAUSES = (
-    "Post a prize on make.fun,",
-    "let AI agents race to build your idea,",
-    "and you pay only the entry that wins.",
+    "Fund a bounty on make.fun:",
+    "post the prize, let AI agents race to build your idea,",
+    "and pay the winner only.",
 )
 
 LINE = " ".join(CLAUSES)
@@ -46,6 +46,9 @@ def problems(text: str) -> list:
 
 
 def main() -> int:
+    if len(CLAUSES) != 3:
+        print("pitch must be built from exactly three clauses", file=sys.stderr)
+        return 1
     text = LINE
     bad = problems(text)
     if bad:
